@@ -2,8 +2,6 @@ import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.nio.file.Files;
@@ -12,7 +10,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
-import java.util.Scanner;
 import java.util.StringJoiner;
 
 public class Main {
@@ -21,8 +18,9 @@ public class Main {
         System.out.println("Введите данные в формате:\n" + 
             "Фамилия Имя Отчество Дата_Рождения(дд.мм.гггг) Номер_Телефона Пол(m/f)");
 
-        // String test = "Иваныов Иван Ивановичч 01.01.2000 79888888888 m";
+        // String test = "Иванов Иван Ивановичч 01.01.2000 79888888888 m";
         // System.out.println(test);
+        // splitInputString(test);
 
         String userInput = System.console().readLine();
         splitInputString(userInput);
@@ -62,8 +60,8 @@ public class Main {
 
     public static void splitCheckAndSave(String inputString) throws Exception{
         String[] splitedInput = inputString.split(" ");
-        String sex = "";
-        String phoneNumber = ""; // В int не влезает, остается String'ом
+        char sex = ' ';
+        Long phoneNumber = 0L; 
         LocalDate birthDay = LocalDate.now();
         String firstName = null;
         String middleName = null;
@@ -72,7 +70,7 @@ public class Main {
         for (String inputPart : splitedInput) {
             if (inputPart.length() == 1){ // Один символ - пол.
                 if (inputPart.equals("f") || inputPart.equals("m")){
-                    sex = inputPart;
+                    sex = inputPart.charAt(0);
                 } else {
                     throw new Exception("Неверно указан пол.");
                 }
@@ -81,9 +79,9 @@ public class Main {
 
             if (inputPart.matches("[0-9]+")){ // Только цифры - номер телефона
                 if (inputPart.length() == 11){ // 11 цифр - международный формат номера телефона
-                    phoneNumber = inputPart;
+                    phoneNumber = Long.parseLong(inputPart);
                 } else {
-                    throw new Exception("Неверно указан номер телефона.");
+                    throw new Exception("Неверно указан номер телефона. Введите телефон в международном формате, без \"+\"");
                 }
                 continue;
             }
@@ -105,7 +103,7 @@ public class Main {
                 if (inputPart.length() > 25) // Из всех вариантов - рекордная фамилия 24 символа, по результатам быстрого гугления.
                     throw new Exception("Слишком длинные Фамилия/Имя/Отечество.");
                 
-                // Ожидаем заполнения ФИО в именно таком формате.
+                // Ожидаем заполнения ФИО в именно таком порядке.
                 if (lastName == null){
                     lastName = inputPart;
                 } else if (firstName == null){
@@ -119,15 +117,15 @@ public class Main {
             }            
             throw new Exception("Некорректный формат данных");
         }
-        saveData(lastName, firstName, middleName, birthDay, phoneNumber, sex);
+        String birthDayString = birthDay.format(DateTimeFormatter.ofPattern("dd.MM.uuuu"));
+        saveData(lastName, firstName, middleName, birthDayString, phoneNumber, sex);
     }
 
     public static boolean saveData(String lastName, String firstName, String middleName,
-                                    LocalDate birthDate, String phoneNumber, String sex) throws Exception{
+                                    String birthDate, Long phoneNumber, char sex) throws Exception{
         StringJoiner stringToSave = new StringJoiner("><","<",">\n");
         stringToSave.add(lastName).add(firstName).add(middleName)
-                    .add(birthDate.format(DateTimeFormatter.ofPattern("dd.MM.uuuu")))
-                    .add(phoneNumber).add(sex);
+                    .add(birthDate).add(String.valueOf(phoneNumber)).add(String.valueOf(sex));
         
         // Определение папки для сохранения данных, создание в случае отстутствия
         String pathToData = "SavedData";
@@ -143,10 +141,10 @@ public class Main {
                 }
             if (exc instanceof UnsupportedEncodingException)
                 throw new Exception("Ошибка кодировки при сохранении файла.\n" + stackString);
-            if (exc instanceof SecurityException)
+            if (exc instanceof SecurityException || exc instanceof FileNotFoundException)
                 throw new Exception("Ошибка доступа к записываемому файлу.\n" + stackString);
-            if (exc instanceof FileNotFoundException)
-                throw new Exception("Ошибка при создании файла записи\n" + stackString);
+            else
+                throw new Exception("Непредвиденная ошибка при работе с файлом.\n" + stackString);
         }
         return true;
     }
